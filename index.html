@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>UNZA Campus Navigator</title>
+
+    <!-- Leaflet map styling -->
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    >
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+        }
+
+        header {
+            background: #123c2d;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        header h1 {
+            margin: 0 0 8px;
+            font-size: 24px;
+        }
+
+        header p {
+            margin: 0;
+            font-size: 14px;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 20px auto;
+            padding: 0 15px;
+        }
+
+        .controls {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        button {
+            background: #176b48;
+            color: white;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 15px;
+        }
+
+        button:hover {
+            background: #104d34;
+        }
+
+        #status {
+            margin-top: 12px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        #map {
+            width: 100%;
+            height: 65vh;
+            min-height: 350px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #555;
+            font-size: 13px;
+        }
+
+        @media (max-width: 600px) {
+            header h1 {
+                font-size: 20px;
+            }
+
+            #map {
+                height: 60vh;
+                min-height: 350px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>UNZA Campus Navigator</h1>
+        <p>Find your way around the University of Zambia</p>
+    </header>
+
+    <main class="container">
+
+        <section class="controls">
+            <h2>My Location</h2>
+
+            <p>
+                Use your phone's GPS to find your current location
+                on the map.
+            </p>
+
+            <button id="locationButton" onclick="fxn_findMyLocation()">
+                Find My Location
+            </button>
+
+            <div id="status" role="status" aria-live="polite">
+                Ready. Press the button to find your location.
+            </div>
+        </section>
+
+        <div id="map" aria-label="Interactive campus map"></div>
+
+    </main>
+
+    <footer>
+        <p>UNZA Campus Navigator | Final-Year Project Prototype</p>
+    </footer>
+
+    <!-- Leaflet JavaScript library -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // Approximate map centre for the UNZA Great East Road Campus.
+        // This is a starting view, not a verified building coordinate.
+        const var_unzaLatitude = -15.3924;
+        const var_unzaLongitude = 28.3292;
+
+        // Create the interactive map.
+        const var_map = L.map("map").setView(
+            [var_unzaLatitude, var_unzaLongitude],
+            17
+        );
+
+        // Add the OpenStreetMap map layer.
+        L.tileLayer(
+            "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+            {
+                maxZoom: 19,
+                attribution:
+                    '&copy; <a href="https://www.openstreetmap.org/copyright">' +
+                    'OpenStreetMap</a> contributors'
+            }
+        ).addTo(var_map);
+
+        // Create a marker for the user's location.
+        let var_userMarker = null;
+
+        // Create a circle to indicate location accuracy.
+        let var_accuracyCircle = null;
+
+        // Display the user's current location.
+        function fxn_findMyLocation() {
+            const var_status = document.getElementById("status");
+            const var_button = document.getElementById("locationButton");
+
+            if (!navigator.geolocation) {
+                var_status.textContent =
+                    "Your browser does not support location services.";
+                return;
+            }
+
+            var_status.textContent =
+                "Requesting your location. Please allow location access.";
+
+            var_button.disabled = true;
+
+            navigator.geolocation.getCurrentPosition(
+
+                function (position) {
+                    const var_latitude = position.coords.latitude;
+                    const var_longitude = position.coords.longitude;
+                    const var_accuracy = position.coords.accuracy;
+
+                    const var_userPosition = [
+                        var_latitude,
+                        var_longitude
+                    ];
+
+                    // Move the map to the user's location.
+                    var_map.setView(var_userPosition, 18);
+
+                    // Add or update the location marker.
+                    if (var_userMarker === null) {
+                        var_userMarker = L.marker(var_userPosition)
+                            .addTo(var_map);
+                    } else {
+                        var_userMarker.setLatLng(var_userPosition);
+                    }
+
+                    var_userMarker.bindPopup(
+                        "<b>Your Current Location</b><br>" +
+                        "Latitude: " + var_latitude.toFixed(6) + "<br>" +
+                        "Longitude: " + var_longitude.toFixed(6)
+                    ).openPopup();
+
+                    // Show the estimated GPS accuracy.
+                    if (var_accuracyCircle === null) {
+                        var_accuracyCircle = L.circle(
+                            var_userPosition,
+                            {
+                                radius: var_accuracy,
+                                color: "#176b48",
+                                fillOpacity: 0.15
+                            }
+                        ).addTo(var_map);
+                    } else {
+                        var_accuracyCircle.setLatLng(var_userPosition);
+                        var_accuracyCircle.setRadius(var_accuracy);
+                    }
+
+                    var_status.textContent =
+                        "Location found! Estimated accuracy: " +
+                        Math.round(var_accuracy) +
+                        " metres.";
+
+                    var_button.disabled = false;
+                },
+
+                function (error) {
+                    const var_messages = {
+                        1: "Location permission was denied. Please allow location access in your browser settings.",
+                        2: "Your location is currently unavailable. Try moving outdoors.",
+                        3: "The location request timed out. Please try again."
+                    };
+
+                    var_status.textContent =
+                        var_messages[error.code] ||
+                        "Unable to retrieve your location.";
+
+                    var_button.disabled = false;
+                },
+
+                {
+                    enableHighAccuracy: true,
+                    timeout: 30000,
+                    maximumAge: 0
+                }
+            );
+        }
+    </script>
+
+</body>
+</html>
